@@ -1,8 +1,10 @@
 import os
 import time
 
+import requests
+
 from honeyfile_watcher import start_honeyfile_monitor
-from telemetry import collect_system_metrics
+from telemetry import collect_system_metrics, send_telemetry
 
 
 HONEYFILE_DIR = os.path.join(os.path.dirname(__file__), "..", "honeyfiles")
@@ -17,8 +19,14 @@ def main():
     try:
         next_report = time.monotonic()
         while True:
-            metrics = collect_system_metrics()
-            print(f"[TELEMETRIA] {metrics}")
+            try:
+                metrics = collect_system_metrics()
+                result = send_telemetry(metrics)
+                status = result.get('status', 'não informado')
+                print(f'[TELEMETRIA] {metrics} | Status CYPHERADM: {status}')
+            except (requests.RequestException, ValueError, RuntimeError, OSError) as error:
+                print(f'[ERRO TELEMETRIA] Não foi possível comunicar com o CYPHERADM: {error}')
+
             next_report += 5
             time.sleep(max(0, next_report - time.monotonic()))
     except KeyboardInterrupt:
